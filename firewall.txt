@@ -1,0 +1,129 @@
+###################
+###		###	
+###  Firewall   ###
+###             ###
+################### 
+
+
+###FIREWALL ADDRESS-LIST
+/ip firewall address-list 
+add list=admins address=172.16.10.2 comment="" disabled=no 
+
+###FIREWALL FILTER
+/ip firewall filter
+add chain=input connection-state=invalid action=drop comment="Drop Invalid connections" disabled=no
+add chain=input src-address-list=admins action=accept comment="" disabled=no
+add chain=input protocol=tcp tcp-flags=syn action=drop comment="" disabled=no
+add chain=input protocol=udp dst-port=161 action=drop comment="" disabled=no
+add action=drop chain=input comment="Drop -> FTP" disabled=no dst-port=21-22 protocol=tcp
+add action=drop chain=input comment="" disabled=no dst-port=21-25 protocol=udp
+
+======================================================================================================
+
+LIXO DA INTERNET
+
+##### Bloqueio de "Bogon IP Addresses"
+/ip firewall filter add chain=forward src-address=0.0.0.0/8 action=drop
+/ip firewall filter add chain=forward dst-address=0.0.0.0/8 action=drop
+/ip firewall filter add chain=forward src-address=127.0.0.0/8 action=drop
+/ip firewall filter add chain=forward dst-address=127.0.0.0/8 action=drop
+/ip firewall filter add chain=forward src-address=224.0.0.0/3 action=drop
+/ip firewall filter add chain=forward dst-address=224.0.0.0/3 action=drop
+
+====================================================================================================
+
+/ip firewall filter
+add action=add-dst-to-address-list address-list=web address-list-timeout=0s chain=forward log-prefix="" protoc
+    src-port=80
+
+=====================================================================================================
+
+REDIRECIONAMENTO CAMERAS
+
+/ip firewall nat
+add action=dst-nat chain=dstnat dst-address=192.168.11.14 dst-port=8080 log-prefix="" protocol=tcp to-addresses=172.25.1.1 to-ports=8081
+
+====================================================================================================
+
+DROP UOL PELO MANGLE "MANO"
+
+# Estou marcando os IPs de destino ao site UOL
+/ip firewall mangle
+add action=add-dst-to-address-list address-list=uol address-list-timeout=0s chain=prerouting content=uol log-prefix=""
+
+# Estou dropando os ips da lista de destino do site UOL
+/ip firewall filter
+add action=accept chain=forward log-prefix="" src-address=8.8.8.8
+add action=accept chain=forward dst-address=8.8.8.8 log-prefix=""
+add action=drop chain=forward comment=UOL dst-address-list=uol log-prefix=""
+
+
+==============================================================================================================
+
+PROTECAO DOS PROTOCOLOS
+
+##### Marque "jumps" para novos "chains"
+/ip firewall filter add chain=forward protocol=tcp action=jump jump-target=tcp 
+/ip firewall filter add chain=forward protocol=udp action=jump jump-target=udp 
+/ip firewall filter add chain=forward protocol=icmp action=jump jump-target=icmp
+
+##### Cria tcp chain e nega tcp portas entrada
+/ip firewall filter add chain=tcp protocol=tcp dst-port=69 action=drop \ comment="deny TFTP"
+/ip firewall filter add chain=tcp protocol=tcp dst-port=111 action=drop \ comment="deny RPC portmapper" 
+/ip firewall filter add chain=tcp protocol=tcp dst-port=135 action=drop \ comment="deny RPC portmapper" 
+/ip firewall filter add chain=tcp protocol=tcp dst-port=137-139 action=drop \ comment="deny NBT" 
+/ip firewall filter add chain=tcp protocol=tcp dst-port=445 action=drop \ comment="deny cifs" 
+/ip firewall filter add chain=tcp protocol=tcp dst-port=2049 action=drop comment="deny NFS" 
+/ip firewall filter add chain=tcp protocol=tcp dst-port=12345-12346 action=drop comment="deny NetBus" 
+/ip firewall filter add chain=tcp protocol=tcp dst-port=20034 action=drop comment="deny NetBus" 
+/ip firewall filter add chain=tcp protocol=tcp dst-port=3133 action=drop comment="deny BackOriffice" 
+/ip firewall filter add chain=tcp protocol=tcp dst-port=67-68 action=drop comment="deny DHCP"
+ 
+##### Nega udp portas entrada udp chain:
+/ip firewall filter add chain=udp protocol=udp dst-port=69 action=drop comment="deny TFTP" 
+/ip firewall filter add chain=udp protocol=udp dst-port=111 action=drop comment="deny PRC portmapper" 
+/ip firewall filter add chain=udp protocol=udp dst-port=135 action=drop comment="deny PRC portmapper" 
+/ip firewall filter add chain=udp protocol=udp dst-port=137-139 action=drop comment="deny NBT" 
+/ip firewall filter add chain=udp protocol=udp dst-port=2049 action=drop comment="deny NFS" 
+/ip firewall filter add chain=udp protocol=udp dst-port=3133 action=drop comment="deny BackOriffice"
+ 
+##### Permite todos needed icmp codes in icmp chain:
+/ip firewall filter add chain=icmp protocol=icmp icmp-options=0:0 action=accept comment="echo reply" 
+/ip firewall filter add chain=icmp protocol=icmp icmp-options=3:0 action=accept comment="net unreachable" 
+/ip firewall filter add chain=icmp protocol=icmp icmp-options=3:1 action=accept comment="host unreachable"
+/ip firewall filter add chain=icmp protocol=icmp icmp-options=3:4 action=accept comment="host unreachable fragmentation required" 
+/ip firewall filter add chain=icmp protocol=icmp icmp-options=4:0 action=accept comment="allow source quench" 
+/ip firewall filter add chain=icmp protocol=icmp icmp-options=8:0 action=accept comment="allow echo request" 
+/ip firewall filter add chain=icmp protocol=icmp icmp-options=11:0 action=accept comment="allow time exceed" 
+/ip firewall filter add chain=icmp protocol=icmp icmp-options=12:0 action=accept comment="allow parameter bad" 
+/ip firewall filter add chain=icmp action=drop comment="deny all other types"
+
+==============================================================================================================
+
+TENTATIVA DE INVASAO
+
+
+##### Somente 10 FTP login incorrect
+
+/ip firewall filter add chain=input protocol=tcp dst-port=21 src-address-list=ftp_blacklist action=drop comment="drop ftp brute forcers"
+/ip firewall filter add chain=output action=accept protocol=tcp content="530 Login incorrect" dst-limit=1/1m,9,dst-address/1m
+/ip firewall filter add chain=output action=add-dst-to-address-list protocol=tcp content="530 Login incorrect" address-list=ftp_blacklist address-list-timeout=3h
+
+
+##### Somente 10 SSH login incorrect
+
+/ip firewall filter add chain=input protocol=tcp dst-port=22 src-address-list=ssh_blacklist action=drop comment="drop ssh brute  forcers" disabled=no
+/ip firewall filter add chain=input protocol=tcp dst-port=22 connection-state=new src-address-list=ssh_stage3 action=add-src-to-address-list \ address-list=ssh_blacklist address-list-timeout=10d comment="" disabled=no
+/ip firewall filter add chain=input protocol=tcp dst-port=22 connection-state=new src-address-list=ssh_stage2 action=add-src-to-address-list address-list=ssh_stage3 address-list-timeout=1m comment="" disabled=no
+/ip firewall filter add chain=input protocol=tcp dst-port=22 connection-state=new src-address-list=ssh_stage1 
+\ action=add-src-to-address-list address-list=ssh_stage2 address-list-timeout=1m comment="" disabled=no
+/ip firewall filter add chain=input protocol=tcp dst-port=22 connection-state=new action=add-src-to-address-list address-list=ssh_stage1 address-list-timeout=1m comment="" disabled=no
+
+==============================================================================================================
+
+
+
+
+
+
+
