@@ -1,0 +1,78 @@
+﻿#Ola aqui é o Leonardo Vieira (LeoMikroTik) siga-me nas redes sociais para receber mais dicas.
+# Telegram  https://t.me/dominandomikrotik
+# Instagram  @Contract_ti  
+# facebook.com/contractti 
+# youtube.com/leomikrotik 
+# Voce precisa criar um DHCP Client nas portas desejadas, colocar este script e precisa fazer o NAT veja pelo video 
+
+#WAN1 - 1 
+
+{
+    :local rmark "WAN1"
+    :local count [/ip route print count-only where comment="WAN1-TESTE"]
+    :if ($bound=1) do={
+        :if ($count = 0) do={
+            /ip route add dst-address=8.8.8.8 gateway=$"gateway-address" comment="WAN1-TESTE"
+        } else={
+            :if ($count = 1) do={
+                :local test [/ip route find where comment="WAN1-TESTE"]
+                :if ([/ip route get $test gateway] != $"gateway-address") do={
+                    /ip route set $test gateway=$"gateway-address"
+                }
+            } else={
+                :error "Multiple routes found"
+            }
+        }
+    } else={
+        /ip route remove [find comment="WAN1-TESTE"]
+    }
+}
+
+
+#Netwatch - usar no Down
+log error "WAN-1 caiu"
+/ip dhcp-cl set add-def=no [find comment="WAN1"]  
+/tool e-mail send to=" leonardo@contractti.com.br" subject="O Link do ISP-1 caiu - Abrir chamado"
+
+#Usar no UP
+log error "WAN-1 Voltou"
+/ip dhcp-cl set add-def=yes [find comment="WAN1"]  
+/tool e-mail send to=" leonardo@contractti.com.br" subject="O Link do ISP-1 Voltou - Encerrar chamado"
+
+
+
+################################################################
+
+WAN2  - Script
+
+{
+    :local rmark "WAN2-TESTE"
+    :local count [/ip route print count-only where comment="WAN2-TESTE"]
+    :if ($bound=1) do={
+        :if ($count = 0) do={
+            /ip route add dst-address=8.8.4.4 gateway=$"gateway-address" comment="WAN2-TESTE"
+        } else={
+            :if ($count = 1) do={
+                :local test [/ip route find where comment="WAN2-TESTE"]
+                :if ([/ip route get $test gateway] != $"gateway-address") do={
+                    /ip route set $test gateway=$"gateway-address"
+                }
+            } else={
+                :error "Multiple routes found"
+            }
+        }
+    } else={
+        /ip route remove [find comment="WAN2-TESTE"]
+    }
+}
+
+
+#Netwatch - usar no Down
+log error "WAN-2 caiu"
+/ip dhcp-cl set add-def=no [find comment="WAN2"]  
+/tool e-mail send to=" leonardo@contractti.com.br" subject="O Link do ISP-2 caiu - Abrir chamado"
+
+#Netwatch - Usar no UP
+log error "WAN-2 caiu"
+/ip dhcp-cl set add-def=yes [find comment="WAN2"]  
+/tool e-mail send to=" leonardo@contractti.com.br" subject="O Link do ISP-2 Voltou - Encerrar chamado"
