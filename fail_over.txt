@@ -1,0 +1,29 @@
+### IP ADDRESS
+/ip address 
+add address=192.168.10.2/30 interface=ether4 comment="LinkA"
+add address=192.168.20.2/30 interface=ether5 comment="LinkB"
+
+### Routa Netwatch (colocar um IP da internet de sua confiança, ele sempre saira pelo Principal)
+/ip route add dst-address=200.160.4.6 gateway=192.168.10.1
+
+### NETWATCH
+/tool netwatch
+add comment=Redundancia host=200.160.4.6 interval=30s up-script=Principal down-script=Redundante
+
+## SCRIPT
+/system script add name=Principal
+
+:if ([/ip route get [/ip route find comment="LinkA"] disable]=yes) do={
+:ip route enable [/ip route find comment="LinkA"];
+:ip route disable [/ip route find comment="LinkB"];
+}
+
+/system script add name=Redundante 
+
+:if ([/ip route get [/ip route find comment="LinkA"] disable]=no) do={
+:ip route disable [/ip route find comment="LinkA"];
+:ip route enable [/ip route find comment="LinkB"];
+}
+
+### Protecao do Netwatch
+/ip firewall filter add chain=input dst-address=200.160.4.6 out-interface=ether4 action=drop

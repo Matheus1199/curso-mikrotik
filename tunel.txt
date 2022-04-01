@@ -1,0 +1,53 @@
+### TUNEL ###
+
+#IPIP
+
+-> Matriz
+/interface ipip
+add !keepalive local-address=192.168.10.14 name=G1<->G2 remote-address=192.168.10.5
+/ip address add address=1.1.1.1/30
+/ip route add dst-address=50.50.50.0/30 gateway=1.1.1.2
+
+-> Filial
+/interface ipip
+add !keepalive local-address=192.168.10.5 name=G2<->G1 remote-address=192.168.10.14
+/ip address add address=1.1.1.2/30
+/ip route add dst-address=90.90.90.0/30 gateway=1.1.1.1
+
+
+#L2TP
+
+-> Matriz
+/interface l2tp-server server
+set enabled=yes
+/ppp secret
+add local-address=1.1.1.1 name=eu password=123 profile=default-encryption remote-address=1.1.1.2 service=l2tp
+/ip route add dst-address=50.50.50.0/30 gateway=1.1.1.2
+
+-> Filial
+/interface l2tp-client
+add connect-to=192.168.10.14 disabled=no name=l2tp-out1 password=123 user=eu
+/ip route add dst-address=90.90.90.0/30 gateway=1.1.1.1
+
+
+=> Tunel - EOIP
+
+Adiciona o EOIP
+/interface eoip
+add !keepalive mac-address=02:98:25:96:6A:B7 name=EOIP_G1<->G2 remote-address=192.168.1.159 tunnel-id=20
+
+Cria a Bridge
+/interface bridge add name=bridge1
+/interface bridge port
+add bridge=bridge1 interface=EOIP_G1<->G2
+add bridge=bridge1 interface=ether2
+
+Coloca um IP na Bridge
+/ip address add address=192.168.3.1/24 interface=bridge1
+
+
+=> Tunel - PPTP
+
+/interface pptp-server server set enabled=yes
+/ppp secret
+add local-address=172.16.10.1 name=PPTP_G1 password=123456 profile=default-encryption remote-address=172.16.10.10 service=pptp
