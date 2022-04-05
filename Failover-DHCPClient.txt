@@ -73,6 +73,6 @@ log error "WAN-2 caiu"
 /tool e-mail send to=" leonardo@contractti.com.br" subject="O Link do ISP-2 caiu - Abrir chamado"
 
 #Netwatch - Usar no UP
-log error "WAN-2 caiu"
+log error "WAN-2 voltou"
 /ip dhcp-cl set add-def=yes [find comment="WAN2"]  
 /tool e-mail send to=" leonardo@contractti.com.br" subject="O Link do ISP-2 Voltou - Encerrar chamado"
