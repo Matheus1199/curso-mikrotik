@@ -33,8 +33,7 @@ LIXO DA INTERNET
 ====================================================================================================
 
 /ip firewall filter
-add action=add-dst-to-address-list address-list=web address-list-timeout=0s chain=forward log-prefix="" protoc
-    src-port=80
+add action=add-dst-to-address-list address-list=web address-list-timeout=0s chain=forward log-prefix="" protocol=tcp src-port=80
 
 =====================================================================================================
 
