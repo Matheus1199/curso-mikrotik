@@ -12,7 +12,7 @@
     :local count [/ip route print count-only where comment="WAN1-TESTE"]
     :if ($bound=1) do={
         :if ($count = 0) do={
-            /ip route add dst-address=8.8.8.8 gateway=$"gateway-address" comment="WAN1-TESTE"
+            /ip route add dst-address=200.160.4.6 gateway=$"gateway-address" comment="WAN1-TESTE"
         } else={
             :if ($count = 1) do={
                 :local test [/ip route find where comment="WAN1-TESTE"]
